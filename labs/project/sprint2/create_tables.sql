@@ -95,3 +95,7 @@ ALTER TABLE gittba04.xlmusdt ADD PARTITION (year = 2022) LOCATION 'hdfs:/datos/g
 ALTER TABLE gittba04.xlmusdt ADD PARTITION (year = 2023) LOCATION 'hdfs:/datos/gittba/gittba04/XLMUSDT/2023';
 ALTER TABLE gittba04.xlmusdt ADD PARTITION (year = 2024) LOCATION 'hdfs:/datos/gittba/gittba04/XLMUSDT/2024';
 ALTER TABLE gittba04.xlmusdt ADD PARTITION (year = 2025) LOCATION 'hdfs:/datos/gittba/gittba04/XLMUSDT/2025';
+
+-- Check Partitions for all tables
+SHOW PARTITIONS gittba04.btcusdt;
+SELECT * FROM gittba04.btcusdt WHERE year = 2023 LIMIT 10;
