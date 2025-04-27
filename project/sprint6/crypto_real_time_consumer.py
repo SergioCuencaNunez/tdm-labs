@@ -4,6 +4,7 @@ from kafka import KafkaConsumer
 from kafka.structs import TopicPartition
 import json
 import requests
+from datetime import datetime
 
 KAFKA_BROKER = '192.168.80.34:9092'
 KAFKA_TOPIC = 'gittba_SOL'
@@ -23,32 +24,26 @@ consumer = KafkaConsumer(
 # Asigna topic y partición
 consumer.assign([TopicPartition(KAFKA_TOPIC, 0)])
 
-# Lee los mensajes
-records = consumer.poll(timeout_ms=5000)
+while True:
+    records = consumer.poll(timeout_ms=1000)
+    for topic_data, consumer_records in records.items():
+        for record in consumer_records:
+            try:
+                key = record.key
+                value = record.value
 
-# Procesa los mensajes
-for topic_data, consumer_records in records.items():
-    print("TopicPartition:", topic_data)
-    for record in consumer_records:
-        try:
-            key = record.key
-            value = record.value
+                # Validación: solo si price y volume son numéricos
+                if isinstance(value.get("price"), (int, float)) and isinstance(value.get("volume"), (int, float)):
+                    # Inserta la fecha actual en formato ISO para @timestamp
+                    value["@timestamp"] = datetime.utcnow().isoformat() + "Z"
 
-            print(f"key: {key}")
-            print(f"value: {value}")
+                    # Inserta el documento en Elastic con ID = offset
+                    doc_id = str(record.offset)
+                    response = requests.put(f"{ELASTIC_URL}{doc_id}", json=value)
 
-            # Validación: solo si price y volume son numéricos
-            if isinstance(value.get("price"), (int, float)) and isinstance(value.get("volume"), (int, float)):
-                value["@timestamp"] = "2025-03-31T00:00:00Z"
-                doc_id = str(record.offset)
+                    print(f"[{value['@timestamp']}] Insertado (id={doc_id}) → status {response.status_code}")
+                else:
+                    print("Mensaje descartado: price o volume inválidos")
 
-                response = requests.put(f"{ELASTIC_URL}{doc_id}", json=value)
-                print(f"Documento insertado (id={doc_id}): {response.status_code} - {response.text}")
-            else:
-                print("Mensaje descartado: price o volume no disponibles o no numéricos.")
-
-        except Exception as e:
-            print(f"Error procesando mensaje: {e}")
-
-# Cierra el consumidor
-consumer.close()
+            except Exception as e:
+                print(f"Error procesando mensaje: {e}")
